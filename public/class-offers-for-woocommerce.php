@@ -23,7 +23,7 @@ class Angelleye_Offers_For_Woocommerce {
 	 *
 	 * @var     string
 	 */
-	const VERSION = '1.0.1';
+	const VERSION = '1.1.0';
 
 	/**
 	 *
@@ -81,10 +81,16 @@ class Angelleye_Offers_For_Woocommerce {
 		 
 		/* Add "Make Offer" button code parts - Before add to cart */
 		add_action( 'woocommerce_before_add_to_cart_button', array( $this, 'angelleye_ofwc_before_add_to_cart_button' ) );
-		
-		/* Add "Make Offer" button code parts - After add to cart */
-		add_action( 'woocommerce_after_add_to_cart_button', array( $this, 'angelleye_ofwc_after_add_to_cart_button' ) );
-		
+
+        /* Add "Make Offer" button code parts - After add to cart */
+        add_action( 'woocommerce_after_add_to_cart_button', array( $this, 'angelleye_ofwc_after_add_to_cart_button' ) );
+
+        /**
+         * Filter - Add "Make Offer" button code parts - Filters stock html output
+         * @since	1.0.1
+         */
+        add_filter( 'woocommerce_stock_html', array( $this, 'angelleye_ofwc_woocommerce_stock_html' ) );
+
 		/* Add "Make Offer" button code parts - After shop loop item */
 		add_action( 'woocommerce_after_shop_loop_item', array( $this, 'angelleye_ofwc_after_show_loop_item' ), 99, 2 );
 
@@ -164,6 +170,9 @@ class Angelleye_Offers_For_Woocommerce {
         // get offers options - general
         $button_options_general = get_option('offers_for_woocommerce_options_general');
 
+        // get offers options - display
+        $button_options_display = get_option('offers_for_woocommerce_options_display');
+
         // if post has offers button enabled
         if ( $custom_tab_options_offers['enabled'] == 'yes' && !$is_external_product )
         {
@@ -177,30 +186,34 @@ class Angelleye_Offers_For_Woocommerce {
             }
             else
             {
-                echo '<div class="offers-for-woocommerce-make-offer-button-cleared"></div>
-                <div class="offers-for-woocommerce-add-to-cart-wrap"><div>';
+                // adds hidden class if position is not default
+                $hiddenclass = ( isset($button_options_display['display_setting_make_offer_button_position_single']) && $button_options_display['display_setting_make_offer_button_position_single'] != 'default') ? 'angelleye-ofwc-hidden' : '';
+                $customclass = ( $hiddenclass == 'angelleye-ofwc-hidden' ) ? $button_options_display['display_setting_make_offer_button_position_single'] : '';
+
+                echo '<div class="offers-for-woocommerce-make-offer-button-cleared '.$hiddenclass.'"></div>
+                <div id="offers-for-woocommerce-add-to-cart-wrap" class="offers-for-woocommerce-add-to-cart-wrap" data-ofwc-position="'.$customclass.'"><div>';
             }
 		}
 	}
-	
-	/**
-	 * Add Make Offer button after add to cart button
-	 *
-	 * @since	0.1.0
-	 */
-	public function angelleye_ofwc_after_add_to_cart_button()
-	{
-		global $post;
-		$custom_tab_options_offers = array(
-			'enabled' => get_post_meta( $post->ID, 'offers_for_woocommerce_enabled', true ),
-		);
+
+    /**
+     * Add Make Offer button after add to cart button
+     *
+     * @since	0.1.0
+     */
+    public function angelleye_ofwc_after_add_to_cart_button()
+    {
+        global $post;
+        $custom_tab_options_offers = array(
+            'enabled' => get_post_meta( $post->ID, 'offers_for_woocommerce_enabled', true ),
+        );
 
         $_pf = new WC_Product_Factory();
         $_product = $_pf->get_product( $post->ID );
         $is_external_product = ( isset( $_product->product_type ) && $_product->product_type == 'external' ) ? TRUE : FALSE;
 
-		// if post has offers button enabled
-		if ( $custom_tab_options_offers['enabled'] == 'yes' && !$is_external_product )
+        // if post has offers button enabled
+        if ( $custom_tab_options_offers['enabled'] == 'yes' && !$is_external_product )
         {
             // get offers options - display
             $button_options_display = get_option('offers_for_woocommerce_options_display');
@@ -223,14 +236,80 @@ class Angelleye_Offers_For_Woocommerce {
             }
             else
             {
-                $is_lightbox = ( isset($button_options_display['display_setting_make_offer_form_display_type']) && $button_options_display['display_setting_make_offer_form_display_type'] == 'lightbox') ? TRUE : FALSE;
-                $lightbox_class = ( isset($button_options_display['display_setting_make_offer_form_display_type']) && $button_options_display['display_setting_make_offer_form_display_type'] == 'lightbox') ? ' offers-for-woocommerce-make-offer-button-single-product-lightbox' : '';
-                echo '<div class="angelleye-offers-clearfix"></div></div><div class="single_variation_wrap_angelleye ofwc_offer_tab_form_wrap"><button type="button" id="offers-for-woocommerce-make-offer-button-id-' . $post->ID . '" class="offers-for-woocommerce-make-offer-button-single-product '. $lightbox_class . ' button alt" style="' . $custom_styles_override . '">' . $button_title . '</button></div>';
+                // adds hidden class if position is not default
+                $hiddenclass = ( isset($button_options_display['display_setting_make_offer_button_position_single']) && $button_options_display['display_setting_make_offer_button_position_single'] != 'default') ? 'angelleye-ofwc-hidden' : '';
+                $customclass = ( $hiddenclass == 'angelleye-ofwc-hidden' ) ? $button_options_display['display_setting_make_offer_button_position_single'] : '';
+
+                $is_lightbox = (isset($button_options_display['display_setting_make_offer_form_display_type']) && $button_options_display['display_setting_make_offer_form_display_type'] == 'lightbox') ? TRUE : FALSE;
+                $lightbox_class = (isset($button_options_display['display_setting_make_offer_form_display_type']) && $button_options_display['display_setting_make_offer_form_display_type'] == 'lightbox') ? ' offers-for-woocommerce-make-offer-button-single-product-lightbox' : '';
+
+                echo '<div class="angelleye-offers-clearfix '.$hiddenclass.'"></div></div><div class="single_variation_wrap_angelleye ofwc_offer_tab_form_wrap '.$hiddenclass.'"><button type="button" id="offers-for-woocommerce-make-offer-button-id-' . $post->ID . '" class="offers-for-woocommerce-make-offer-button-single-product ' . $lightbox_class . ' button alt" style="' . $custom_styles_override . '">' . $button_title . '</button></div>';
                 echo '</div>';
             }
-		}
-	}
-	
+        }
+    }
+
+    /**
+     * Filter - Add "Make Offer" button code parts - Filters stock html output
+     * @since	1.0.1
+     */
+    public function angelleye_ofwc_woocommerce_stock_html($availability_html)
+    {
+        global $post;
+        $custom_tab_options_offers = array(
+            'enabled' => get_post_meta( $post->ID, 'offers_for_woocommerce_enabled', true ),
+        );
+
+        $_pf = new WC_Product_Factory();
+        $_product = $_pf->get_product( $post->ID );
+
+        $is_instock = ( $_product->is_in_stock() ) ? TRUE : FALSE;
+
+        if(!$is_instock)
+        {
+            $is_external_product = (isset($_product->product_type) && $_product->product_type == 'external') ? TRUE : FALSE;
+
+            // if post has offers button enabled
+            if ($custom_tab_options_offers['enabled'] == 'yes' && !$is_external_product) {
+                // get offers options - display
+                $button_options_display = get_option('offers_for_woocommerce_options_display');
+
+                $button_title = (isset($button_options_display['display_setting_custom_make_offer_btn_text']) && $button_options_display['display_setting_custom_make_offer_btn_text'] != '') ? $button_options_display['display_setting_custom_make_offer_btn_text'] : __('Make Offer', 'angelleye_offers_for_woocommerce');
+
+                $custom_styles_override = '';
+                if ($button_options_display) {
+                    if (isset($button_options_display['display_setting_custom_make_offer_btn_text_color']) && $button_options_display['display_setting_custom_make_offer_btn_text_color'] != '') {
+                        $custom_styles_override .= 'color:' . $button_options_display['display_setting_custom_make_offer_btn_text_color'] . '!important;';
+                    }
+                    if (isset($button_options_display['display_setting_custom_make_offer_btn_color']) && $button_options_display['display_setting_custom_make_offer_btn_color'] != '') {
+                        $custom_styles_override .= ' background:' . $button_options_display['display_setting_custom_make_offer_btn_color'] . '!important; border-color:' . $button_options_display['display_setting_custom_make_offer_btn_color'] . '!important;';
+                    }
+                }
+
+                if ( (is_front_page()) || (!is_front_page() && !is_product() ))
+                {
+                    // do nothing
+                }
+                else
+                {
+                    // adds hidden class if position is not default
+                    $hiddenclass = (isset($button_options_display['display_setting_make_offer_button_position_single']) && $button_options_display['display_setting_make_offer_button_position_single'] != 'default') ? 'angelleye-ofwc-hidden' : '';
+                    $customclass = ($hiddenclass == 'angelleye-ofwc-hidden') ? $button_options_display['display_setting_make_offer_button_position_single'] : '';
+
+                    $is_lightbox = (isset($button_options_display['display_setting_make_offer_form_display_type']) && $button_options_display['display_setting_make_offer_form_display_type'] == 'lightbox') ? TRUE : FALSE;
+                    $lightbox_class = (isset($button_options_display['display_setting_make_offer_form_display_type']) && $button_options_display['display_setting_make_offer_form_display_type'] == 'lightbox') ? ' offers-for-woocommerce-make-offer-button-single-product-lightbox' : '';
+
+                    $availability_html.= '<div class="offers-for-woocommerce-make-offer-button-cleared '.$hiddenclass.'"></div>
+                    <div id="offers-for-woocommerce-add-to-cart-wrap" class="offers-for-woocommerce-add-to-cart-wrap" data-ofwc-position="'.$customclass.'"><div>';
+                    $availability_html.= '<div class="angelleye-offers-clearfix '.$hiddenclass.'"></div></div><div class="single_variation_wrap_angelleye ofwc_offer_tab_form_wrap ' . $hiddenclass . '"><button type="button" id="offers-for-woocommerce-make-offer-button-id-' . $post->ID . '" class="offers-for-woocommerce-make-offer-button-single-product ' . $lightbox_class . ' button alt" style="' . $custom_styles_override . '">' . $button_title . '</button></div>';
+                    $availability_html.= '</div>';
+                    $availability_html.= '<div class="angelleye-offers-clearfix '.$hiddenclass.'"></div>';
+                }
+            }
+        }
+        return $availability_html;
+    }
+
 	/**
 	 * Callback - Add Make Offer button after add to cart button on Catalog view
 	 *
@@ -327,7 +406,7 @@ class Angelleye_Offers_For_Woocommerce {
             // get offers options - display
             $button_options_display = get_option('offers_for_woocommerce_options_display');
 
-            if($button_options_display['display_setting_make_offer_form_display_type'] == 'lightbox')
+            if( isset($button_options_display['display_setting_make_offer_form_display_type']) && $button_options_display['display_setting_make_offer_form_display_type'] == 'lightbox')
             {
                 return $tabs;
             }
@@ -353,6 +432,12 @@ class Angelleye_Offers_For_Woocommerce {
 	 */
 	public function angelleye_ofwc_display_custom_woocommerce_product_tab_content()
 	{
+        global $post;
+
+        $_pf = new WC_Product_Factory();
+        $_product = $_pf->get_product( $post->ID );
+        $is_sold_individually = $_product->is_sold_individually();
+
         // set parent offer id if found in get var
         $parent_offer_id = (isset($_GET['offer-pid']) && $_GET['offer-pid'] != '') ? $_GET['offer-pid'] : '';
         $parent_offer_uid = (isset($_GET['offer-uid']) && $_GET['offer-uid'] != '') ? $_GET['offer-uid'] : '';
@@ -366,6 +451,10 @@ class Angelleye_Offers_For_Woocommerce {
             $parent_post_status = get_post_status($parent_offer_id);
             $post_parent_type = get_post_type($parent_offer_id);
             $parent_post_offer_uid = get_post_meta($parent_offer_id, 'offer_uid', true);
+
+            $final_offer = get_post_meta($parent_offer_id, 'offer_final_offer', true );
+            $expiration_date = get_post_meta($parent_offer_id, 'offer_expiration_date', true );
+            $expiration_date_formatted = ($expiration_date) ? date("Y-m-d 23:59:59", strtotime($expiration_date)) : FALSE;
 
             // check for valid parent offer ( must be a offer post type and accepted/countered and uid must match
             if( (isset($parent_post_status) && $parent_post_status != 'countered-offer') || ($post_parent_type != 'woocommerce_offer') || (!$parent_post_offer_uid) || ($parent_offer_uid == '') || ($parent_post_offer_uid != $parent_offer_uid) )
@@ -383,6 +472,21 @@ class Angelleye_Offers_For_Woocommerce {
                     $parent_offer_error = true;
                     $parent_offer_error_message = __('Invalid Parent Offer Id; See shop manager for assistance.', 'angelleye_offers_for_woocommerce');
                 }
+            }
+            // If offer counter was set to 'final offer'
+            elseif( $final_offer == '1' )
+            {
+                $parent_offer_id = '';
+                $parent_offer_error = true;
+                $parent_offer_error_message = __('You can not submit a counter offer at this time; Counter offer is a final offer. You can submit a new offer using the form below.', 'angelleye_offers_for_woocommerce');
+            }
+
+            // If offer counter 'offer_expiration_date' is past
+            elseif( ($expiration_date_formatted) && ($expiration_date_formatted <= (date("Y-m-d H:i:s", current_time('timestamp', 0 ))) ) )
+            {
+                $parent_offer_id = '';
+                $parent_offer_error = true;
+                $parent_offer_error_message = __('Counter offer has expired; You can not submit a counter offer at this time. You can submit a new offer using the form below.', 'angelleye_offers_for_woocommerce');
             }
             else
             {
@@ -468,6 +572,14 @@ class Angelleye_Offers_For_Woocommerce {
 			self::single_activate();
 		}
 		flush_rewrite_rules();
+
+        /**
+         * Log activation in Angell EYE database via web service.
+         */
+        $log_url = $_SERVER['HTTP_HOST'];
+        $log_plugin_id = 3;
+        $log_activation_status = 1;
+        wp_remote_request('http://www.angelleye.com/web-services/wordpress/update-plugin-status.php?url=' . $log_url . '&plugin_id=' . $log_plugin_id . '&activation_status=' . $log_activation_status);
 	}
 
 	/**
@@ -507,6 +619,14 @@ class Angelleye_Offers_For_Woocommerce {
 			self::single_deactivate();
 		}
 		flush_rewrite_rules();
+
+        /**
+         * Log deactivation in Angell EYE database via web service.
+         */
+        $log_url = $_SERVER['HTTP_HOST'];
+        $log_plugin_id = 3;
+        $log_activation_status = 0;
+        wp_remote_request('http://www.angelleye.com/web-services/wordpress/update-plugin-status.php?url='.$log_url.'&plugin_id='.$log_plugin_id.'&activation_status='.$log_activation_status);
 	}
 
 	/**
@@ -1008,6 +1128,10 @@ class Angelleye_Offers_For_Woocommerce {
             // check for parent offer unique id
             $offer_uid = get_post_meta( $offer->ID, 'orig_offer_uid', true);
 
+            // check offer expiration date
+            $expiration_date = get_post_meta($offer->ID, 'offer_expiration_date', true );
+            $expiration_date_formatted = ($expiration_date) ? date("Y-m-d 23:59:59", strtotime($expiration_date)) : FALSE;
+
             // Invalid Offer Id
             if($offer == '')
             {
@@ -1018,13 +1142,25 @@ class Angelleye_Offers_For_Woocommerce {
             {
                 $this->send_api_response( __( 'Invalid Offer Status or Expired Offer Id; See shop manager for assistance', 'angelleye_offers_for_woocommerce' ) );
             }
+            // If offer counter 'offer_expiration_date' is past
+            elseif( ($expiration_date_formatted) && ($expiration_date_formatted <= (date("Y-m-d H:i:s", current_time('timestamp', 0 ))) ) )
+            {
+                $request_error = true;
+                $this->send_api_response( __( 'Offer has expired; You can submit a new offer using the form below.', 'angelleye_offers_for_woocommerce' ) );
+            }
             else
             {
                 // Get offer meta
                 $offer_meta = get_post_meta( $offer->ID, '', true );
 
+                // Error - Offer On Hold
+                if($offer->post_status == 'on-hold-offer')
+                {
+                    $request_error = true;
+                    $this->send_api_response( __( 'Offer is currently On Hold; We will notify you when offer status is updated.', 'angelleye_offers_for_woocommerce' ) );
+                }
                 // Error - Offer Not Accepted/Countered
-                if($offer->post_status != 'accepted-offer' && $offer->post_status != 'countered-offer' && $offer->post_status != 'buyercountered-offer')
+                elseif($offer->post_status != 'accepted-offer' && $offer->post_status != 'countered-offer' && $offer->post_status != 'buyercountered-offer')
                 {
                     $request_error = true;
                     $this->send_api_response( __( 'Invalid Offer Status or Expired Offer Id; See shop manager for assistance', 'angelleye_offers_for_woocommerce' ) );

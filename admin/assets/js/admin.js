@@ -5,6 +5,13 @@
 
 		// Place your administration-specific JavaScript here
         $(document).ready(function(){
+
+            /**
+             * Init datepicker for offer expiration date
+             * @since   1.0.1
+             */
+            $('.datepicker').datepicker();
+
             $('#offer-quantity').autoNumeric('init',
                 {
                     vMin: '0',
@@ -125,12 +132,15 @@
             var backordersAllowed = $('#offer-backorders-allowed').val();
             if( backordersAllowed !== 'true' )
             {
-                if ( parseInt(maxStockAvailable) < parseInt(input1) ) {
-                    $('#angelleye-woocommerce-offer-meta-summary-notice-msg').show();
-                }
-                else
+                if(parseInt(maxStockAvailable) != '')
                 {
-                    $('#angelleye-woocommerce-offer-meta-summary-notice-msg').hide();
+                    if ( parseInt(maxStockAvailable) < parseInt(input1) ) {
+                        $('#angelleye-woocommerce-offer-meta-summary-notice-msg').show();
+                    }
+                    else
+                    {
+                        $('#angelleye-woocommerce-offer-meta-summary-notice-msg').hide();
+                    }
                 }
             }
         };
@@ -149,6 +159,15 @@
         $('.angelleye-offer-buyer-stats-toggle').click(function(){
             $('#angelleye-offer-buyer-history').slideToggle('800');
             return false;
+        });
+
+        // Move to Trash confirmation
+        $('#aeofwc-delete-action .deletion').click(function(){
+
+            if(!confirm('are you sure?'))
+            {
+                return false;
+            }
         });
 	});
 
