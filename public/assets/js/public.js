@@ -9,8 +9,37 @@
                 var split = val.split("=", 2);
                 get[split[0]] = split[1];
             });
-            if(get["aewcobtn"]){
-                angelleyeOpenMakeOfferForm();
+
+            if(get["aewcobtn"] && !( $("div.woocommerce-message").length > 0 ) ){
+                if( !$(".woocommerce-error:first").hasClass('aeofwc-woocommerce-error') )
+                {
+                    // do nothing
+                }
+                else
+                {
+                    angelleyeOpenMakeOfferForm();
+                }
+            }
+
+            var makeOfferBtnPosition = $('#offers-for-woocommerce-add-to-cart-wrap').attr('data-ofwc-position');
+            if(makeOfferBtnPosition !== '' && makeOfferBtnPosition !== 'default')
+            {
+                var makeOfferBtnhtml = $('.single_variation_wrap_angelleye.ofwc_offer_tab_form_wrap').html();
+
+                // after price
+                if(makeOfferBtnPosition == 'after_price') {
+                    $('.product .summary .price:first').after("<div class='offers-for-woocommerce-add-to-cart-wrap ofwc-no-float'>"+ makeOfferBtnhtml +"");
+                }
+
+                // after product tabs
+                if(makeOfferBtnPosition == 'after_tabs') {
+                    $('.product .woocommerce-tabs').after("<div class='offers-for-woocommerce-add-to-cart-wrap ofwc-no-float'>"+ makeOfferBtnhtml +"");
+                }
+
+                // before add to cart (after single_variation)
+                if(makeOfferBtnPosition == 'before_add') {
+                    $('#offers-for-woocommerce-add-to-cart-wrap div:first').before("<div class='offers-for-woocommerce-add-to-cart-wrap ofwc-no-float'>" + makeOfferBtnhtml + "");
+                }
             }
 
             $(".offers-for-woocommerce-make-offer-button-single-product").click(function(){
@@ -251,7 +280,14 @@
                     $("#lightbox_custom_ofwc_offer_form_close_btn").show();
                 }
 
-                $("#woocommerce-make-offer-form-quantity").focus();
+                if( $("#woocommerce-make-offer-form-quantity").attr('type') == 'hidden' )
+                {
+                    $("#woocommerce-make-offer-form-price-each").focus();
+                }
+                else
+                {
+                    $("#woocommerce-make-offer-form-quantity").focus();
+                }
             }
             else
             {
@@ -260,7 +296,14 @@
                 $(".woocommerce-tabs div.panel").css("display", "none");
                 $(".woocommerce-tabs div#tab-tab_custom_ofwc_offer").css("display", "block");
 
-                $("#woocommerce-make-offer-form-quantity").focus();
+                if( $("#woocommerce-make-offer-form-quantity").attr('type') == 'hidden' )
+                {
+                    $("#woocommerce-make-offer-form-price-each").focus();
+                }
+                else
+                {
+                    $("#woocommerce-make-offer-form-quantity").focus();
+                }
 
                 var targetTab = $(".tab_custom_ofwc_offer_tab");
                 $('html, body').animate({
