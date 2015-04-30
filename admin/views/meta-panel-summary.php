@@ -175,7 +175,7 @@
                 <h5>Status</h5>
                 <?php if( isset( $current_status_value ) && $current_status_value == 'completed-offer' ) { } else { ?>
                     <div class="offer-post-status-input-wrap">
-                        <select name="post_status" autocomplete="off" required="required" <?php if (isset($current_status_value) && $current_status_value == 'completed-offer') echo ' disabled="disabled"'; ?>>
+                        <select id="woocommerce_offer_post_status" name="post_status" autocomplete="off" required="required" <?php if (isset($current_status_value) && $current_status_value == 'completed-offer') echo ' disabled="disabled"'; ?>>
                             <?php if ( (isset($current_status_value) && ( $current_status_value == 'publish' || $current_status_value == 'buyercountered-offer' || $current_status_value == 'expired-offer' ) ) || ( !isset($current_status_value) ) ) { ?>
                             <option value="">- Select status</option>
                             <?php } ?>
@@ -205,6 +205,10 @@
                 <?php $show_notice_msg = ( isset($show_offer_inventory_msg) && $show_offer_inventory_msg ) ? TRUE : FALSE; ?>
                 <div id="angelleye-woocommerce-offer-meta-summary-notice-msg" <?php echo (!$show_notice_msg) ? ' class="angelleye-hidden"' : '';?>">
                     <div class="aeofwc-notice-msg-inner"><?php echo (isset($offer_inventory_msg)) ? $offer_inventory_msg : '';?></div>
+                </div>
+
+                <div id="angelleye-woocommerce-offer-meta-summary-expire-notice-msg" class="angelleye-hidden">
+                    <div class="aeofwc-notice-msg-inner"><?php echo __('Expiration date has past', 'angelleye-offers-for-woocommerce'); ?></div>
                 </div>
 
                 <div class="woocommerce-offer-edit-submit-btn-wrap">

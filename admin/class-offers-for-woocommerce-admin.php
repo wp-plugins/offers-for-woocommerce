@@ -788,9 +788,20 @@ class Angelleye_Offers_For_Woocommerce_Admin {
      * @since   1.0.1
      */
     function aeofwc_search_join( $join ) {
-        global $wpdb;
+        global $wpdb, $screen, $wp;
 
-        if ( is_search() ) {
+        $screen = get_current_screen();
+
+        if ( is_search() && $screen->post_type == 'woocommerce_offer' ) {
+
+            $found_blank_s = (isset($_GET['s']) && isset($_GET['orderby'])) ? TRUE : FALSE;
+            if($found_blank_s)
+            {
+                $current_url = add_query_arg( $wp->query_string, '', home_url( $wp->request ) );
+                $current_url = esc_url_raw($current_url);
+                $redirect_url = str_replace("&s=&", "&", $current_url);
+                wp_redirect($redirect_url);
+            }
             $join .='LEFT JOIN '.$wpdb->postmeta. ' ON '. $wpdb->posts . '.ID = ' . $wpdb->postmeta . '.post_id ';
         }
 
@@ -804,7 +815,10 @@ class Angelleye_Offers_For_Woocommerce_Admin {
     function aeofwc_search_where( $where ) {
         global $pagenow, $wpdb;
 
-        if ( is_search() ) {
+        require_once(ABSPATH . 'wp-admin/includes/screen.php');
+        $screen = get_current_screen();
+
+        if ( is_search() && $screen->post_type == 'woocommerce_offer' ) {
             $where = preg_replace(
                 "/\(\s*".$wpdb->posts.".post_title\s+LIKE\s*(\'[^\']+\')\s*\)/",
                 "(".$wpdb->posts.".post_title LIKE $1) OR (".$wpdb->postmeta.".meta_value LIKE $1)", $where );
@@ -820,7 +834,9 @@ class Angelleye_Offers_For_Woocommerce_Admin {
     function aeofwc_search_distinct( $where ) {
         global $wpdb;
 
-        if ( is_search() ) {
+        $screen = get_current_screen();
+
+        if ( is_search() && $screen->post_type == 'woocommerce_offer' ) {
             return "DISTINCT";
         }
 
@@ -1006,10 +1022,10 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 	public function jc_display_archive_state( $states ) 
 	{
 		global $post;
-		$arg = get_query_var( 'post_status' );
+
 		$screen = get_current_screen();
 
-		if ( $screen->post_type == 'woocommerce_offer' )
+		if (!empty($screen) && $screen->post_type == 'woocommerce_offer' )
 		{
             if($post->post_status == 'accepted-offer'){
                 $states = array('<br><div id="woocommerce-offer-post-status-grid-icon-id-'.$post->ID.'" class="woocommerce-offer-post-status-grid-icon-div"><i class="woocommerce-offer-post-status-grid-icon accepted" title="Offer Status: Accepted">Accepted</i></div>');
@@ -1461,17 +1477,14 @@ class Angelleye_Offers_For_Woocommerce_Admin {
             // if buyercountered-offer previous then use buyer counter values
             $is_offer_buyer_countered_status = ( $_POST['post_previous_status'] == 'buyercountered-offer' ) ? true : false;
 
-            $product_qty = ( $is_offer_buyer_countered_status ) ? get_post_meta($post_id, 'offer_buyer_counter_quantity', true) : get_post_meta($post_id, 'offer_quantity', true);
-            $product_price_per = ( $is_offer_buyer_countered_status ) ? get_post_meta($post_id, 'offer_buyer_counter_price_per', true) : get_post_meta($post_id, 'offer_price_per', true);
+            $product_qty = ( $is_offer_buyer_countered_status ) ? get_post_meta($post_id, 'offer_buyer_counter_quantity', true) : get_post_meta($post_id, 'orig_offer_quantity', true);
+            $product_price_per = ( $is_offer_buyer_countered_status ) ? get_post_meta($post_id, 'offer_buyer_counter_price_per', true) : get_post_meta($post_id, 'orig_offer_price_per', true);
             $product_total = ($product_qty * $product_price_per);
 
-            // if buyercountered-offer status, update postmeta values for quantity,price,amount
-            if( $is_offer_buyer_countered_status )
-            {
-                update_post_meta( $post_id, 'offer_quantity', $product_qty );
-                update_post_meta( $post_id, 'offer_price_per', $product_price_per );
-                update_post_meta( $post_id, 'offer_amount', $product_total );
-            }
+            // Update qty/price/total meta values
+            update_post_meta( $post_id, 'offer_quantity', $product_qty );
+            update_post_meta( $post_id, 'offer_price_per', $product_price_per );
+            update_post_meta( $post_id, 'offer_amount', $product_total );
 
             $offer_args = array(
                 'recipient' => $recipient,
@@ -1893,11 +1906,16 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 		 */
 		add_settings_field(
 			'general_setting_enable_make_offer_btn_frontpage', // ID
-			'Enable Make Offer button on home page', // Title 
+			'Show on Home Page', // Title
 			array( $this, 'offers_for_woocommerce_options_page_output_input_checkbox' ), // Callback TEXT input
 			'offers_for_woocommerce_general_settings', // Page
 			'general_settings', // Section 
-			array('option_name'=>'offers_for_woocommerce_options_general', 'input_label'=>'general_setting_enable_make_offer_btn_frontpage', 'input_required'=>FALSE)         
+			array(
+                'option_name'=>'offers_for_woocommerce_options_general',
+                'input_label'=>'general_setting_enable_make_offer_btn_frontpage',
+                'input_required'=>FALSE,
+                'description' => __('Check this option to display offer buttons for products on your home page.', $this->plugin_slug),
+            )
 		);
 
         /**
@@ -1906,11 +1924,16 @@ class Angelleye_Offers_For_Woocommerce_Admin {
          */
         add_settings_field(
             'general_setting_enable_make_offer_btn_catalog', // ID
-            'Enable Make Offer button on shop page', // Title
+            'Show on Shop Page', // Title
             array( $this, 'offers_for_woocommerce_options_page_output_input_checkbox' ), // Callback TEXT input
             'offers_for_woocommerce_general_settings', // Page
             'general_settings', // Section
-            array('option_name'=>'offers_for_woocommerce_options_general', 'input_label'=>'general_setting_enable_make_offer_btn_catalog', 'input_required'=>FALSE)
+            array(
+                'option_name'=>'offers_for_woocommerce_options_general',
+                'input_label'=>'general_setting_enable_make_offer_btn_catalog',
+                'input_required'=>FALSE,
+                'description' => __('Check this option to display offer buttons for products on your shop page.', $this->plugin_slug),
+            )
         );
 
         /**
@@ -1919,11 +1942,34 @@ class Angelleye_Offers_For_Woocommerce_Admin {
          */
         add_settings_field(
             'general_setting_enable_offers_by_default', // ID
-            'Enable Make Offer button on new products by default', // Title
+            'Enable Offers by Default', // Title
             array( $this, 'offers_for_woocommerce_options_page_output_input_checkbox' ), // Callback TEXT input
             'offers_for_woocommerce_general_settings', // Page
             'general_settings', // Section
-            array('option_name'=>'offers_for_woocommerce_options_general', 'input_label'=>'general_setting_enable_offers_by_default', 'input_required'=>FALSE)
+            array(
+                'option_name'=>'offers_for_woocommerce_options_general',
+                'input_label'=>'general_setting_enable_offers_by_default',
+                'input_required'=>FALSE,
+                'description' => __('Check this option to automatically enable offers on all new products by default.', $this->plugin_slug),
+            )
+        );
+
+        /**
+         * Add field - 'General Settings' - 'general_setting_limit_offer_quantity_by_stock'
+         * Limit Offer Quantity on products with limited stock and no backorders
+         */
+        add_settings_field(
+            'general_setting_limit_offer_quantity_by_stock', // ID
+            'Limit Offer Quantity at Product Stock Quantity', // Title
+            array( $this, 'offers_for_woocommerce_options_page_output_input_checkbox' ), // Callback TEXT input
+            'offers_for_woocommerce_general_settings', // Page
+            'general_settings', // Section
+            array(
+                'option_name'=>'offers_for_woocommerce_options_general',
+                'input_label'=>'general_setting_limit_offer_quantity_by_stock',
+                'input_required'=>FALSE,
+                'description' => __('Check this option to limit offer quantity at stock quantity on products not allowing backorders.', $this->plugin_slug),
+            )
         );
 
 		/**
@@ -1942,11 +1988,15 @@ class Angelleye_Offers_For_Woocommerce_Admin {
          */
         add_settings_field(
             'display_setting_make_offer_form_display_type', // ID
-            'Make Offer form display type', // Title
+            'Form Display Type', // Title
             array( $this, 'offers_for_woocommerce_options_page_output_input_select' ), // Callback SELECT input
             'offers_for_woocommerce_display_settings', // Page
             'display_settings', // Section
-            array('option_name'=>'offers_for_woocommerce_options_display', 'input_label'=>'display_setting_make_offer_form_display_type', 'input_required'=>FALSE,
+            array(
+                'option_name'=>'offers_for_woocommerce_options_display',
+                'input_label'=>'display_setting_make_offer_form_display_type',
+                'input_required'=>FALSE,
+                'description' => __('Depending on your theme, you may wish to display the offer form on a tab within the product page or in a lightbox window on top of the product page.', $this->plugin_slug),
                 'options'=> array(
                     array('option_label' => 'Product Tabs (default display)', 'option_value' => 'tabs'),
                     array('option_label' => 'Lightbox', 'option_value' => 'lightbox')
@@ -1959,11 +2009,15 @@ class Angelleye_Offers_For_Woocommerce_Admin {
          */
         add_settings_field(
             'display_setting_make_offer_button_position_single', // ID
-            'Make Offer button position', // Title
+            'Button Position', // Title
             array( $this, 'offers_for_woocommerce_options_page_output_input_select' ), // Callback SELECT input
             'offers_for_woocommerce_display_settings', // Page
             'display_settings', // Section
-            array('option_name'=>'offers_for_woocommerce_options_display', 'input_label'=>'display_setting_make_offer_button_position_single', 'input_required'=>FALSE,
+            array(
+                'option_name'=>'offers_for_woocommerce_options_display',
+                'input_label'=>'display_setting_make_offer_button_position_single',
+                'input_required'=>FALSE,
+                'description' => __('Use this setting to adjust the location of the \'Make Offer\' button on your product detail page.', $this->plugin_slug),
                 'options'=> array(
                     array('option_label' => 'After add to cart button (default display)', 'option_value' => 'default'),
                     array('option_label' => 'Before add to cart button', 'option_value' => 'before_add'),
@@ -1978,11 +2032,16 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 		 */
 		add_settings_field(
 			'display_setting_custom_make_offer_btn_text', // ID
-			'Make Offer button text', // Title 
+			'Button Text', // Title
 			array( $this, 'offers_for_woocommerce_options_page_output_input_text' ), // Callback TEXT input
 			'offers_for_woocommerce_display_settings', // Page
 			'display_settings', // Section
-			array('option_name'=>'offers_for_woocommerce_options_display', 'input_label'=>'display_setting_custom_make_offer_btn_text', 'input_required'=>FALSE)
+			array(
+                'option_name'=>'offers_for_woocommerce_options_display',
+                'input_label'=>'display_setting_custom_make_offer_btn_text',
+                'input_required'=>FALSE,
+                'description' => __('Set the text you would like to be displayed in the offer button.', $this->plugin_slug),
+            )
 		);
 		
 		/**
@@ -1991,24 +2050,34 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 		 */
 		add_settings_field(
 			'display_setting_custom_make_offer_btn_text_color', // ID
-			'Make Offer button text color', // Title 
+			'Button Text Color', // Title
 			array( $this, 'offers_for_woocommerce_options_page_output_input_colorpicker' ), // Callback TEXT input
 			'offers_for_woocommerce_display_settings', // Page
 			'display_settings', // Section
-			array('option_name'=>'offers_for_woocommerce_options_display', 'input_label'=>'display_setting_custom_make_offer_btn_text_color', 'input_required'=>FALSE)
+			array(
+                'option_name'=>'offers_for_woocommerce_options_display',
+                'input_label'=>'display_setting_custom_make_offer_btn_text_color',
+                'input_required'=>FALSE,
+                'description' => __('Use the color-picker to choose the font color for the text on your offer buttons.', $this->plugin_slug),
+            )
 		);
-		
+
 		/**
 		 * Add field - 'Display Settings' - 'display_setting_custom_make_offer_btn_color'
 		 * Make Offer Button Text Color
 		 */
 		add_settings_field(
 			'display_setting_custom_make_offer_btn_color', // ID
-			'Make Offer button color', // Title 
+			'Button Color', // Title
 			array( $this, 'offers_for_woocommerce_options_page_output_input_colorpicker' ), // Callback TEXT input
 			'offers_for_woocommerce_display_settings', // Page
 			'display_settings', // Section
-			array('option_name'=>'offers_for_woocommerce_options_display', 'input_label'=>'display_setting_custom_make_offer_btn_color', 'input_required'=>FALSE)
+			array(
+                'option_name'=>'offers_for_woocommerce_options_display',
+                'input_label'=>'display_setting_custom_make_offer_btn_color',
+                'input_required'=>FALSE,
+                'description' => __('Use the color-picker to choose the background color for your offer buttons.', $this->plugin_slug),
+            )
 		);
 
 	} // END - angelleye_ofwc_intialize_options
@@ -2048,12 +2117,15 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 	public function offers_for_woocommerce_options_page_output_input_text($args) 
 	{
 		$options = get_option($args['option_name']);
+        $description = isset($args['description']) ? $args['description'] : '';
 		$field_label = $args['input_label'];
 		$field_required = ($args['input_required']) ? ' required="required" ' : '';
 		printf(
             '<input ' .$field_required. ' type="text" id="'.$field_label.'" name="'.$args['option_name'].'['.$field_label.']" value="%s" />',
             isset( $options[$field_label] ) ? esc_attr( $options[$field_label]) : ''
         );
+
+        echo '<div class="angelleye-settings-description">' . $description . '</div>';
 	}
 
     /**
@@ -2064,11 +2136,12 @@ class Angelleye_Offers_For_Woocommerce_Admin {
     public function offers_for_woocommerce_options_page_output_input_checkbox($args)
     {
         $options = get_option($args['option_name']);
+        $description = isset($args['description']) ? $args['description'] : '';
         $field_label = $args['input_label'];
         $field_required = ($args['input_required'] === true) ? ' required="required" ' : '';
         $is_checked = (isset($options[$field_label])) ? $options[$field_label] : '0';
         print(
-            '<input '. $field_required. ' type="checkbox" id="'.$field_label.'" name="'.$args['option_name'].'['.$field_label.']" value="1" ' . checked(1, $is_checked, false) . '/>'
+            '<input '. $field_required. ' type="checkbox" id="'.$field_label.'" name="'.$args['option_name'].'['.$field_label.']" value="1" ' . checked(1, $is_checked, false) . '/>&nbsp;' . $description
         );
     }
 
@@ -2080,6 +2153,7 @@ class Angelleye_Offers_For_Woocommerce_Admin {
     public function offers_for_woocommerce_options_page_output_input_select($args)
     {
         $options = get_option($args['option_name']);
+        $description = isset($args['description']) ? $args['description'] : '';
         $field_label = $args['input_label'];
         $field_required = ($args['input_required'] === true) ? ' required="required" ' : '';
 
@@ -2098,6 +2172,8 @@ class Angelleye_Offers_For_Woocommerce_Admin {
             '</select>'
         );
 
+        echo '<div class="angelleye-settings-description">' . $description . '</div>';
+
     }
 	
 	/**
@@ -2108,6 +2184,7 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 	public function offers_for_woocommerce_options_page_output_input_colorpicker($args) 
 	{
 		$options = get_option($args['option_name']);
+        $description = isset($args['description']) ? $args['description'] : '';
 		$field_label = $args['input_label'];
 		$field_required = ($args['input_required']) ? ' required="required" ' : '';
 		
@@ -2147,6 +2224,8 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 			});
 		';
 		echo '</script>';
+
+        echo '<div class="angelleye-settings-description">' . $description . '</div>';
 	}
 	
 	/**
@@ -2313,7 +2392,7 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 		return array_merge(
 			array(
 				'configure' => sprintf( '<a href="%s">%s</a>', admin_url( 'options-general.php?page=offers-for-woocommerce' ), __( 'Configure', 'offers-for-woocommerce' ) ),
-				'docs'      => sprintf( '<a href="%s" target="_blank">%s</a>', 'http://www.angelleye.com/category/docs/offers-for-woocommerce/', __( 'Docs', 'offers-for-woocommerce' ) ),
+				'docs'      => sprintf( '<a href="%s" target="_blank">%s</a>', 'http://www.angelleye.com/category/docs/offers-for-woocommerce/?utm_source=offers_for_woocommerce&utm_medium=docs_link&utm_campaign=offers_for_woocommerce', __( 'Docs', 'offers-for-woocommerce' ) ),
 				'support'   => sprintf( '<a href="%s" target="_blank">%s</a>', 'http://wordpress.org/support/plugin/offers-for-woocommerce/', __( 'Support', 'offers-for-woocommerce' ) ),
 				'review'    => sprintf( '<a href="%s" target="_blank">%s</a>', 'http://wordpress.org/support/view/plugin-reviews/offers-for-woocommerce', __( 'Write a Review', 'offers-for-woocommerce' ) ),
 			),
@@ -3262,6 +3341,7 @@ class Angelleye_Offers_For_Woocommerce_Admin {
                     }
                     // build the redirect url
                     $sendback = add_query_arg(array('enabled_offers' => $updated_count, 'ids' => join(',', $post_ids)), 'edit.php?post_type=product');
+                    $sendback = esc_url_raw($sendback);
 
                     break;
                 case 'disable_offers':
@@ -3274,6 +3354,7 @@ class Angelleye_Offers_For_Woocommerce_Admin {
                     }
                     // build the redirect url
                     $sendback = add_query_arg(array('disabled_offers' => $updated_count, 'ids' => join(',', $post_ids)), 'edit.php?post_type=product');
+                    $sendback = esc_url_raw($sendback);
 
                     break;
                 default:
