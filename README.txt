@@ -1,4 +1,4 @@
-﻿=== Offers for WooCommerce ===
+=== Offers for WooCommerce ===
 Contributors: angelleye
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=T962XWAC2HHZN
 Tags: woocommerce, offers, negotiation
@@ -100,6 +100,10 @@ Automatic updates should work great for you.  As always, though, we recommend ba
 4. Optionally, add an "Offer Note to Buyer" to inform the buyer why the adjustment is being made.
 5. Click the "Update" button to save the adjustment.
 
+= The email notifications are not getting sent.  Why? =
+
+* Make sure to check in WooCommerce -> Settings, and then look in the Emails tab.  Click into the links for New Offer, New counteroffer, Offer received, etc. and enable the ones you want to get sent.
+
 = Where can I find more documentation? =
 
 * [Installation and Activation](https://www.angelleye.com/offers-for-woocommerce-user-guide/#section-2)
@@ -111,7 +115,7 @@ Automatic updates should work great for you.  As always, though, we recommend ba
 
 == Changelog ==
 
-= 1.1.3 - 05.31.2015 =
+= 1.1.3 - 06.01.2015 =
 * Tweak - Adjusts the email template system so that templates can be overridden from within a theme.
 * Tweak - Moves the plugin action links to the Description column on the Plugins page because there is more room there.
 * Tweak - Removes the offer button from products that are free (0.00 price).
