@@ -1,4 +1,4 @@
-=== Offers for WooCommerce ===
+﻿=== Offers for WooCommerce ===
 Contributors: angelleye
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=T962XWAC2HHZN
 Tags: woocommerce, offers, negotiation
@@ -13,7 +13,7 @@ Adds the power of negotiation to your WooCommerce store.
 == Description ==
 
 = Video Overview =
-[youtube https://youtu.be/3xb0Tfnx16o]
+[youtube https://www.youtube.com/watch?v=3xb0Tfnx16o]
 
 = Introduction =
 
