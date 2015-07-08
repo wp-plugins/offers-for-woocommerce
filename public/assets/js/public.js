@@ -46,12 +46,7 @@
                 angelleyeOpenMakeOfferForm();
             });
 
-            $(".tab_custom_ofwc_offer_tab a").on('click', function()
-            {
-                angelleyeOpenMakeOfferForm();
-            });
-
-            $("#lightbox_custom_ofwc_offer_form_close_btn").on('click', function()
+            $("#lightbox_custom_ofwc_offer_form_close_btn, #aeofwc-close-lightbox-link").on('click', function()
             {
                 $("#lightbox_custom_ofwc_offer_form").removeClass('active');
                 $("#lightbox_custom_ofwc_offer_form").hide();
@@ -224,6 +219,17 @@
                                 $('#tab_custom_ofwc_offer_tab_alt_message_custom').slideToggle('fast');
                                 $( offerForm ).find( ':submit' ).removeAttr( 'disabled','disabled' );
                             }
+                            else if(responseStatus == 'failed-spam')
+                            {
+                                //console.log('failed-custom-msg');
+                                // Hide loader image
+                                $('#offer-submit-loader').hide();
+                                // Show error message DIV
+                                $('#tab_custom_ofwc_offer_tab_alt_message_custom ul #alt-message-custom').html("<strong>Error: </strong>"+responseStatusDetail);
+                                $('#tab_custom_ofwc_offer_tab_alt_message_custom').slideToggle('fast');
+                                $( offerForm ).find( ':submit' ).removeAttr( 'disabled','disabled' );
+                                $('#tab_custom_ofwc_offer_tab_inner fieldset').hide();
+                            }
                             else
                             {
                                 // SUCCESS
@@ -313,7 +319,15 @@
 
             return false;
         }
-		
+
+        $(window).load(function(){
+
+            if( $(".offers-for-woocommerce-make-offer-button-single-product").hasClass("offers-for-woocommerce-make-offer-button-single-product-lightbox") )
+            {
+                $("#aeofwc-close-lightbox-link").css('display','block');
+            }
+        });
+
 		$(window).load(function(){
 			var variantDisplay = $('.single_variation_wrap').css('display');
 			if($('body.woocommerce.single-product #content div.product').hasClass('product-type-variable') && variantDisplay != 'block')

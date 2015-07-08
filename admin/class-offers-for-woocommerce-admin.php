@@ -636,6 +636,7 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 	public function set_woocommerce_offer_columns($columns) 
 	{
         $columns['offer_name'] = __( 'Name', $this->plugin_slug );
+        $columns['offer_product_title'] = __( 'Product', $this->plugin_slug );
 		$columns['offer_amount'] = __( 'Amount', $this->plugin_slug );
 		$columns['offer_price_per'] = __( 'Price Per', $this->plugin_slug );
 		$columns['offer_quantity'] = __( 'Quantity', $this->plugin_slug );
@@ -653,6 +654,24 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 		switch ( $column ) {
             case 'offer_name' :
                 $val = get_post_meta( $post_id , 'offer_name' , true );
+                echo stripslashes($val);
+                break;
+
+            case 'offer_product_title' :
+                $product_id = get_post_meta( $post_id , 'orig_offer_product_id' , true );
+                $product_variant_id = get_post_meta( $post_id , 'orig_offer_product_id' , true );
+
+                $product_title = get_the_title($product_id);
+
+                if($product_title)
+                {
+                    $val = '<a href="post.php?post=' . $product_id . '&action=edit">' . $product_title . '</a>';
+                }
+                else
+                {
+                    $val = '<em>' . __('Not Found', $this->plugin_slug ) . '</em>';
+                }
+
                 echo stripslashes($val);
                 break;
 
@@ -703,8 +722,9 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 	 */
 	public function woocommerce_offer_sortable_columns( $columns ) 
 	{
-        $columns['offer_name'] = 'offer_name';
         $columns['offer_email'] = 'offer_email';
+        $columns['offer_name'] = 'offer_name';
+        $columns['offer_product_title'] = 'orig_offer_product_id';
 		$columns['offer_price_per'] = 'offer_price_per';
 		$columns['offer_quantity'] = 'offer_quantity'; 
 		$columns['offer_amount'] = 'offer_amount';
@@ -1253,6 +1273,28 @@ class Angelleye_Offers_For_Woocommerce_Admin {
                 $_product_image = $_product->get_image( 'shop_thumbnail');
 
                 // set error message if product not found...
+            }
+
+            /**
+             * Set default expiration date on 'pending' offer expiration date input field
+             * @since   1.2.0
+             */
+            if($current_status_value == 'publish')
+            {
+                // get offers options - general
+                $default_expire_date = '';
+                $options_general = get_option('offers_for_woocommerce_options_general');
+                if(!empty($options_general['general_setting_default_expire_days']))
+                {
+                    $current_time = date("Y-m-d H:i:s", current_time('timestamp', 0 ));
+
+                    $default_expire_days = str_replace(",","", $options_general['general_setting_default_expire_days']);
+                    $default_expire_date = ($default_expire_days != '') ? date("m/d/Y", strtotime( $current_time .' + '. $default_expire_days .' days') ) : '';
+                }
+                if($default_expire_date != '')
+                {
+                    $postmeta['offer_expiration_date'] = array($default_expire_date);
+                }
             }
 
             /**
@@ -1854,20 +1896,36 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 	{
 		/**
 		 * Add option - 'General Settings'
-		 */ 
-		if(false == get_option('offers_for_woocommerce_options_general'))	// If the plugin options don't exist, create them.
-		{
-			add_option('offers_for_woocommerce_options_general');
-		}
+		 */
+        //the default options
+        $offers_for_woocommerce_options_general = array(
+            'general_setting_enable_make_offer_btn_frontpage' => '1',
+            'general_setting_enable_make_offer_btn_catalog' => '1'
+        );
+
+        //check to see if present already
+        if(!get_option('offers_for_woocommerce_options_general')) {
+            //option not found, add new
+            add_option('offers_for_woocommerce_options_general', $offers_for_woocommerce_options_general);
+        }
 
 		/**
 		 * Add option - 'Display Settings'
 		 */
-		if(false == get_option('offers_for_woocommerce_options_display'))	// If the plugin options don't exist, create them.
-		{
-			add_option('offers_for_woocommerce_options_display');
-		}
-		
+        //the default options
+        $offers_for_woocommerce_options_display = array(
+            'display_setting_make_offer_form_field_offer_total' => '1',
+            'display_setting_make_offer_form_field_offer_company_name' => '1',
+            'display_setting_make_offer_form_field_offer_phone' => '1',
+            'display_setting_make_offer_form_field_offer_notes' => '1'
+        );
+
+        //check to see if present already
+        if(!get_option('offers_for_woocommerce_options_display')) {
+            //option not found, add new
+            add_option('offers_for_woocommerce_options_display', $offers_for_woocommerce_options_display);
+        }
+
 		/**
 		 * Register setting - 'General Settings'
 		 */	
@@ -1903,7 +1961,7 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 		add_settings_field(
 			'general_setting_enable_make_offer_btn_frontpage', // ID
 			__('Show on Home Page', $this->plugin_slug), // Title
-			array( $this, 'offers_for_woocommerce_options_page_output_input_checkbox' ), // Callback TEXT input
+			array( $this, 'offers_for_woocommerce_options_page_output_input_checkbox' ), // Callback
 			'offers_for_woocommerce_general_settings', // Page
 			'general_settings', // Section 
 			array(
@@ -1921,7 +1979,7 @@ class Angelleye_Offers_For_Woocommerce_Admin {
         add_settings_field(
             'general_setting_enable_make_offer_btn_catalog', // ID
             __('Show on Shop Page', $this->plugin_slug), // Title
-            array( $this, 'offers_for_woocommerce_options_page_output_input_checkbox' ), // Callback TEXT input
+            array( $this, 'offers_for_woocommerce_options_page_output_input_checkbox' ), // Callback
             'offers_for_woocommerce_general_settings', // Page
             'general_settings', // Section
             array(
@@ -1939,7 +1997,7 @@ class Angelleye_Offers_For_Woocommerce_Admin {
         add_settings_field(
             'general_setting_enable_offers_by_default', // ID
             __('Enable Offers by Default', $this->plugin_slug), // Title
-            array( $this, 'offers_for_woocommerce_options_page_output_input_checkbox' ), // Callback TEXT input
+            array( $this, 'offers_for_woocommerce_options_page_output_input_checkbox' ), // Callback
             'offers_for_woocommerce_general_settings', // Page
             'general_settings', // Section
             array(
@@ -1957,7 +2015,7 @@ class Angelleye_Offers_For_Woocommerce_Admin {
         add_settings_field(
             'general_setting_limit_offer_quantity_by_stock', // ID
             __('Limit Offer Quantity at Product Stock Quantity', $this->plugin_slug), // Title
-            array( $this, 'offers_for_woocommerce_options_page_output_input_checkbox' ), // Callback TEXT input
+            array( $this, 'offers_for_woocommerce_options_page_output_input_checkbox' ), // Callback
             'offers_for_woocommerce_general_settings', // Page
             'general_settings', // Section
             array(
@@ -1965,6 +2023,71 @@ class Angelleye_Offers_For_Woocommerce_Admin {
                 'input_label'=>'general_setting_limit_offer_quantity_by_stock',
                 'input_required'=>FALSE,
                 'description' => __('Check this option to limit offer quantity at stock quantity on products not allowing backorders.', $this->plugin_slug),
+            )
+        );
+
+        /**
+         * Add field - 'General Settings' - 'general_setting_default_expire_days'
+         * Default amount of days out to set expire date
+         */
+        add_settings_field(
+            'general_setting_default_expire_days', // ID
+            __('Default Offer Expiration Days', $this->plugin_slug), // Title
+            array( $this, 'offers_for_woocommerce_options_page_output_input_text' ), // Callback TEXT input
+            'offers_for_woocommerce_general_settings', // Page
+            'general_settings', // Section
+            array(
+                'option_name'=>'offers_for_woocommerce_options_general',
+                'input_label'=>'general_setting_default_expire_days',
+                'input_required'=>FALSE,
+                'description' => __('Enter the amount of days from accepting/countering an offer that you would like the expiration date to automatically set.', $this->plugin_slug),
+            )
+        );
+
+        /**
+         * Add field - 'General Settings' - 'general_setting_enable_offers_only_logged_in_users'
+         * Enable Offers For Only Logged-in Users
+         */
+        add_settings_field(
+            'general_setting_enable_offers_only_logged_in_users', // ID
+            __('Enable Offers for Only Logged-in Users', $this->plugin_slug), // Title
+            array( $this, 'offers_for_woocommerce_options_page_output_input_checkbox' ), // Callback TEXT input
+            'offers_for_woocommerce_general_settings', // Page
+            'general_settings', // Section
+            array(
+                'option_name'=>'offers_for_woocommerce_options_general',
+                'input_label'=>'general_setting_enable_offers_only_logged_in_users',
+                'input_required'=>FALSE,
+                'description' => __('Check this option to enable offers on products for only logged-in users.', $this->plugin_slug),
+            )
+        );
+
+        /**
+         * Add field - 'General Settings' - 'general_setting_allowed_roles'
+         * Enable Offers For Only Specific User Roles
+         */
+        $editable_roles = get_editable_roles();
+        $editable_roles_inputs = array();
+        foreach($editable_roles as $role)
+        {
+            array_push($editable_roles_inputs,
+                array('option_label' => $role['name'], 'option_value' => strtolower($role['name']) )
+            );
+        }
+        add_settings_field(
+            'general_setting_allowed_roles', // ID
+            __('Enable Offers for Only Specific User Roles', $this->plugin_slug), // Title
+            array( $this, 'offers_for_woocommerce_options_page_output_input_select' ), // Callback SELECT input
+            'offers_for_woocommerce_general_settings', // Page
+            'general_settings', // Section
+            array(
+                'option_name'=>'offers_for_woocommerce_options_general',
+                'input_label'=>'general_setting_allowed_roles',
+                'input_required'=>FALSE,
+                'description' => __('Select the roles you want offers enabled for. Leave blank for all roles enabled.', $this->plugin_slug),
+                'options'=> $editable_roles_inputs,
+                'multiple' => TRUE,
+                'extra_classes' => 'chosen-select'
             )
         );
 
@@ -2181,13 +2304,23 @@ class Angelleye_Offers_For_Woocommerce_Admin {
         $description = isset($args['description']) ? $args['description'] : '';
         $field_label = $args['input_label'];
         $field_required = ($args['input_required'] === true) ? ' required="required" ' : '';
+        $multiple = (isset($args['multiple']) && $args['multiple'] === true) ? ' multiple="multiple" ' : '';
+        $field_label_multiple = (isset($args['multiple']) && $args['multiple'] === true) ? '[]' : '';
+        $extra_classes = (!empty($args['extra_classes'])) ? ' class="'. $args['extra_classes'] . '" ' : '';
 
         print(
-            '<select '. $field_required. ' id="'.$field_label.'" name="'.$args['option_name'].'['.$field_label.']"/>'
+            '<select '. $extra_classes . $field_required. ' id="'.$field_label.'" name="'.$args['option_name'].'['.$field_label.']'. $field_label_multiple . '" ' . $multiple . '/>'
         );
         foreach( $args['options'] as $option )
         {
-            $is_selected = (isset($options[$field_label]) && $options[$field_label] == $option['option_value']) ? 'selected="selected"' : '';
+            if(isset($args['multiple']) && $args['multiple'] === true)
+            {
+                $is_selected = (isset($options[$field_label]) && in_array($option['option_value'], $options[$field_label])) ? 'selected="selected"' : '';
+            }
+            else
+            {
+                $is_selected = (isset($options[$field_label]) && $options[$field_label] == $option['option_value']) ? 'selected="selected"' : '';
+            }
             print(
                 '<option value="'. $option['option_value'] . '" '. $is_selected .'>'. $option['option_label'] . '</option>'
             );
@@ -2324,6 +2457,9 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 
             // admin styles
             wp_enqueue_style( $this->plugin_slug .'-angelleye-offers-admin-styles', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), Angelleye_Offers_For_Woocommerce::VERSION );
+
+            // chosen js styles
+            wp_enqueue_style( $this->plugin_slug .'-angelleye-offers-admin-styles-jquery-chosen', plugins_url( 'assets/css/chosen/chosen.min.css', __FILE__ ), array(), Angelleye_Offers_For_Woocommerce::VERSION );
         }
 
         if ( "product" == $screen->id && is_admin() )
@@ -2353,8 +2489,14 @@ class Angelleye_Offers_For_Woocommerce_Admin {
 			// Admin footer scripts
 			wp_enqueue_script( $this->plugin_slug . '-angelleye-offers-admin-footer-scripts', plugins_url( 'assets/js/admin-footer-scripts.js', __FILE__ ), array( 'jquery' ), Angelleye_Offers_For_Woocommerce::VERSION );
 
+            // autoNumeric js
+            wp_enqueue_script( $this->plugin_slug . '-angelleye-offers-jquery-auto-numeric-1-9-24', plugins_url( '../public/assets/js/autoNumeric-1-9-24.js', __FILE__ ), array( 'jquery' ), Angelleye_Offers_For_Woocommerce::VERSION );
+
             // Admin settings scripts
             wp_enqueue_script( $this->plugin_slug . '-angelleye-offers-admin-settings-scripts', plugins_url( 'assets/js/admin-settings-scripts.js', __FILE__ ), array( 'jquery' ), Angelleye_Offers_For_Woocommerce::VERSION );
+
+            // Chosen js
+            wp_enqueue_script( $this->plugin_slug . '-angelleye-offers-jquery-chosen', plugins_url( 'assets/js/chosen.jquery.min.js', __FILE__ ), array( 'jquery' ), Angelleye_Offers_For_Woocommerce::VERSION );
 		}
         if ( "edit-woocommerce_offer" == $screen->id && is_admin() )
         {
