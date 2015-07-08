@@ -23,7 +23,7 @@ class Angelleye_Offers_For_Woocommerce {
 	 *
 	 * @var     string
 	 */
-	const VERSION = '1.1.3';
+	const VERSION = '1.1.4';
 
 	/**
 	 *
@@ -129,7 +129,7 @@ class Angelleye_Offers_For_Woocommerce {
          * Action - woocommerce_checkout_order_processed
          * @since   0.1.0
          */
-        add_action( 'woocommerce_checkout_order_processed', array( $this, 'ae_ofwc_woocommerce_checkout_order_processed' ), 1, 2 );
+        add_action( 'woocommerce_checkout_order_processed', array( $this, 'ae_ofwc_woocommerce_checkout_order_processed' ) );
 
         /**
          * Filter - ae_paypal_standard_additional_parameters
@@ -153,6 +153,34 @@ class Angelleye_Offers_For_Woocommerce {
 	public function angelleye_ofwc_before_add_to_cart_button()
 	{
 		global $post;
+        global $current_user;
+
+        // get offers options - general
+        $button_options_general = get_option('offers_for_woocommerce_options_general');
+
+        // get offers options - display
+        $button_options_display = get_option('offers_for_woocommerce_options_display');
+
+        // enable offers for only logged in users
+        if($button_options_general && isset($button_options_general['general_setting_enable_offers_only_logged_in_users']) && $button_options_general['general_setting_enable_offers_only_logged_in_users'] != '') {
+            if ( !is_user_logged_in() ) return;
+        }
+
+        // enable offers for only certain user roles
+        if(!empty($button_options_general['general_setting_allowed_roles']))
+        {
+            if ( is_user_logged_in() ) {
+                $user_data = get_userdata($current_user->ID);
+                $user_roles = $user_data->roles;
+                $role_match = array_intersect($user_roles, $button_options_general['general_setting_allowed_roles'] );
+                if( empty($role_match) ) return;
+            }
+            else
+            {
+                return;
+            }
+        }
+
 		$custom_tab_options_offers = array(
 			'enabled' => get_post_meta( $post->ID, 'offers_for_woocommerce_enabled', true ),
 		);
@@ -161,12 +189,6 @@ class Angelleye_Offers_For_Woocommerce {
         $_product = $_pf->get_product( $post->ID );
         $is_external_product = ( isset( $_product->product_type ) && $_product->product_type == 'external' ) ? TRUE : FALSE;
         $is_instock = ( $_product->is_in_stock() ) ? TRUE : FALSE;
-
-        // get offers options - general
-        $button_options_general = get_option('offers_for_woocommerce_options_general');
-
-        // get offers options - display
-        $button_options_display = get_option('offers_for_woocommerce_options_display');
 
         $button_title = (isset($button_options_display['display_setting_custom_make_offer_btn_text']) && $button_options_display['display_setting_custom_make_offer_btn_text'] != '') ? $button_options_display['display_setting_custom_make_offer_btn_text'] : __('Make Offer', $this->plugin_slug);
 
@@ -197,7 +219,7 @@ class Angelleye_Offers_For_Woocommerce {
                 $hiddenclass = ( isset($button_options_display['display_setting_make_offer_button_position_single']) && $button_options_display['display_setting_make_offer_button_position_single'] != 'default' && $button_options_display['display_setting_make_offer_button_position_single'] != 'right_of_add') ? 'angelleye-ofwc-hidden' : '';
                 $customclass = ( $hiddenclass == 'angelleye-ofwc-hidden' ) ? $button_options_display['display_setting_make_offer_button_position_single'] : '';
 
-                $display_right_of_add = ( $button_options_display['display_setting_make_offer_button_position_single'] == 'right_of_add' ) ? TRUE : FALSE;
+                $display_right_of_add = ( !empty($button_options_display['display_setting_make_offer_button_position_single']) && $button_options_display['display_setting_make_offer_button_position_single'] == 'right_of_add' ) ? TRUE : FALSE;
                 $display_right_of_add_class = ($display_right_of_add) ? 'ofwc-button-right-of-add-to-cart' : '';
 
                 if($display_right_of_add)
@@ -217,6 +239,34 @@ class Angelleye_Offers_For_Woocommerce {
     public function angelleye_ofwc_after_add_to_cart_button()
     {
         global $post;
+        global $current_user;
+
+        // get offers options - general
+        $button_options_general = get_option('offers_for_woocommerce_options_general');
+
+        // get offers options - display
+        $button_options_display = get_option('offers_for_woocommerce_options_display');
+
+        // enable offers for only logged in users
+        if($button_options_general && isset($button_options_general['general_setting_enable_offers_only_logged_in_users']) && $button_options_general['general_setting_enable_offers_only_logged_in_users'] != '') {
+            if ( !is_user_logged_in() ) return;
+        }
+
+        // enable offers for only certain user roles
+        if(!empty($button_options_general['general_setting_allowed_roles']))
+        {
+            if ( is_user_logged_in() ) {
+                $user_data = get_userdata($current_user->ID);
+                $user_roles = $user_data->roles;
+                $role_match = array_intersect($user_roles, $button_options_general['general_setting_allowed_roles'] );
+                if( empty($role_match) ) return;
+            }
+            else
+            {
+                return;
+            }
+        }
+
         $custom_tab_options_offers = array(
             'enabled' => get_post_meta( $post->ID, 'offers_for_woocommerce_enabled', true ),
         );
@@ -229,9 +279,6 @@ class Angelleye_Offers_For_Woocommerce {
         // if post has offers button enabled
         if ( $custom_tab_options_offers['enabled'] == 'yes' && !$is_external_product && $is_instock && ($_product->get_price() > 0))
         {
-            // get offers options - display
-            $button_options_display = get_option('offers_for_woocommerce_options_display');
-
             $button_title = (isset($button_options_display['display_setting_custom_make_offer_btn_text']) && $button_options_display['display_setting_custom_make_offer_btn_text'] != '') ? $button_options_display['display_setting_custom_make_offer_btn_text'] : __('Make Offer', $this->plugin_slug);
 
             $custom_styles_override = '';
@@ -253,7 +300,7 @@ class Angelleye_Offers_For_Woocommerce {
                 // adds hidden class if position is not default
                 $hiddenclass = ( isset($button_options_display['display_setting_make_offer_button_position_single']) && $button_options_display['display_setting_make_offer_button_position_single'] != 'default' && $button_options_display['display_setting_make_offer_button_position_single'] != 'right_of_add') ? 'angelleye-ofwc-hidden' : '';
                 $lightbox_class = (isset($button_options_display['display_setting_make_offer_form_display_type']) && $button_options_display['display_setting_make_offer_form_display_type'] == 'lightbox') ? ' offers-for-woocommerce-make-offer-button-single-product-lightbox' : '';
-                $display_right_of_add = ( $button_options_display['display_setting_make_offer_button_position_single'] == 'right_of_add' ) ? TRUE : FALSE;
+                $display_right_of_add = ( !empty($button_options_display['display_setting_make_offer_button_position_single']) && $button_options_display['display_setting_make_offer_button_position_single'] == 'right_of_add' ) ? TRUE : FALSE;
 
                 if(!$display_right_of_add)
                 {
@@ -277,7 +324,35 @@ class Angelleye_Offers_For_Woocommerce {
 	 */
 	public function angelleye_ofwc_after_show_loop_item($post)
 	{
-		global $post;
+        global $post;
+        global $current_user;
+
+        // get offers options - general
+        $button_options_general = get_option('offers_for_woocommerce_options_general');
+
+        // get offers options - display
+        $button_options_display = get_option('offers_for_woocommerce_options_display');
+
+        // enable offers for only logged in users
+        if($button_options_general && isset($button_options_general['general_setting_enable_offers_only_logged_in_users']) && $button_options_general['general_setting_enable_offers_only_logged_in_users'] != '') {
+            if ( !is_user_logged_in() ) return;
+        }
+
+        // enable offers for only certain user roles
+        if(!empty($button_options_general['general_setting_allowed_roles']))
+        {
+            if ( is_user_logged_in() ) {
+                $user_data = get_userdata($current_user->ID);
+                $user_roles = $user_data->roles;
+                $role_match = array_intersect($user_roles, $button_options_general['general_setting_allowed_roles'] );
+                if( empty($role_match) ) return;
+            }
+            else
+            {
+                return;
+            }
+        }
+
 		$custom_tab_options_offers = array(
 			'enabled' => get_post_meta($post->ID, 'offers_for_woocommerce_enabled', true),
 		);
@@ -286,9 +361,6 @@ class Angelleye_Offers_For_Woocommerce {
         $_product = $_pf->get_product( $post->ID );
         $is_external_product = ( isset( $_product->product_type ) && $_product->product_type == 'external' ) ? TRUE : FALSE;
         $is_instock = ( $_product->is_in_stock() ) ? TRUE : FALSE;
-
-        // get offers options - general
-        $button_options_general = get_option('offers_for_woocommerce_options_general');
 
         // if post has offers button enabled
         if ( $custom_tab_options_offers['enabled'] == 'yes' && !$is_external_product && $is_instock && ($_product->get_price() > 0))
@@ -303,15 +375,11 @@ class Angelleye_Offers_For_Woocommerce {
             }
             else
             {
-                // get offers options - display
-                $button_options_display = get_option('offers_for_woocommerce_options_display');
-
                 $button_title = (isset($button_options_display['display_setting_custom_make_offer_btn_text']) && $button_options_display['display_setting_custom_make_offer_btn_text'] != '') ? $button_options_display['display_setting_custom_make_offer_btn_text'] : __( 'Make Offer', $this->plugin_slug );
 
                 $custom_styles_override = 'style="';
                 if(isset($button_options_display['display_setting_custom_make_offer_btn_text_color']) && $button_options_display['display_setting_custom_make_offer_btn_text_color'] != '')
                 {
-
                     $custom_styles_override.= 'color:'.$button_options_display['display_setting_custom_make_offer_btn_text_color'].'!important;';
                 }
                 if(isset($button_options_display['display_setting_custom_make_offer_btn_color']) && $button_options_display['display_setting_custom_make_offer_btn_color'] != '')
@@ -320,7 +388,9 @@ class Angelleye_Offers_For_Woocommerce {
                 }
                 $custom_styles_override.= '"';
 
-                echo '<a href="'.get_permalink($post->ID).'?aewcobtn=1" id="offers-for-woocommerce-make-offer-button-id-'.$post->ID.'" class="offers-for-woocommerce-make-offer-button-catalog button alt" '.$custom_styles_override.'>'.$button_title.'</a>';
+                $permalink = get_permalink($post->ID);
+                $permalink.= (strpos($permalink, '?') !== false) ? '&aewcobtn=1' : '?aewcobtn=1';
+                echo '<a href="'.$permalink.'" id="offers-for-woocommerce-make-offer-button-id-'.$post->ID.'" class="offers-for-woocommerce-make-offer-button-catalog button alt" '.$custom_styles_override.'>'.$button_title.'</a>';
             }
 		}
 	}
@@ -332,8 +402,33 @@ class Angelleye_Offers_For_Woocommerce {
      */
     public function angelleye_ofwc_lightbox_make_offer_form()
     {
+        global $current_user;
+
+        // get offers options - general
+        $button_options_general = get_option('offers_for_woocommerce_options_general');
+
         // get offers options - display
         $button_options_display = get_option('offers_for_woocommerce_options_display');
+
+        // enable offers for only logged in users
+        if($button_options_general && isset($button_options_general['general_setting_enable_offers_only_logged_in_users']) && $button_options_general['general_setting_enable_offers_only_logged_in_users'] != '') {
+            if ( !is_user_logged_in() ) return;
+        }
+
+        // enable offers for only certain user roles
+        if(!empty($button_options_general['general_setting_allowed_roles']))
+        {
+            if ( is_user_logged_in() ) {
+                $user_data = get_userdata($current_user->ID);
+                $user_roles = $user_data->roles;
+                $role_match = array_intersect($user_roles, $button_options_general['general_setting_allowed_roles'] );
+                if( empty($role_match) ) return;
+            }
+            else
+            {
+                return;
+            }
+        }
 
         $is_lightbox = ( isset($button_options_display['display_setting_make_offer_form_display_type']) && $button_options_display['display_setting_make_offer_form_display_type'] == 'lightbox') ? TRUE : FALSE;
         if($is_lightbox)
@@ -353,6 +448,34 @@ class Angelleye_Offers_For_Woocommerce {
 	public function angelleye_ofwc_add_custom_woocommerce_product_tab($tabs)
 	{
         global $post;
+        global $current_user;
+
+        // get offers options - general
+        $button_options_general = get_option('offers_for_woocommerce_options_general');
+
+        // get offers options - display
+        $button_options_display = get_option('offers_for_woocommerce_options_display');
+
+        // enable offers for only logged in users
+        if($button_options_general && isset($button_options_general['general_setting_enable_offers_only_logged_in_users']) && $button_options_general['general_setting_enable_offers_only_logged_in_users'] != '') {
+            if ( !is_user_logged_in() ) return $tabs;
+        }
+
+        // enable offers for only certain user roles
+        if(!empty($button_options_general['general_setting_allowed_roles']))
+        {
+            if ( is_user_logged_in() ) {
+                $user_data = get_userdata($current_user->ID);
+                $user_roles = $user_data->roles;
+                $role_match = array_intersect($user_roles, $button_options_general['general_setting_allowed_roles'] );
+                if( empty($role_match) ) return $tabs;
+            }
+            else
+            {
+                return $tabs;
+            }
+        }
+
         $custom_tab_options_offers = array(
             'enabled' => get_post_meta( $post->ID, 'offers_for_woocommerce_enabled', true ),
         );
@@ -365,9 +488,6 @@ class Angelleye_Offers_For_Woocommerce {
         // if post has offers button enabled
         if ( $custom_tab_options_offers['enabled'] == 'yes' && !$is_external_product && $is_instock && ($_product->get_price() > 0))
         {
-            // get offers options - display
-            $button_options_display = get_option('offers_for_woocommerce_options_display');
-
             if( isset($button_options_display['display_setting_make_offer_form_display_type']) && $button_options_display['display_setting_make_offer_form_display_type'] == 'lightbox')
             {
                 return $tabs;
@@ -395,6 +515,30 @@ class Angelleye_Offers_For_Woocommerce {
 	public function angelleye_ofwc_display_custom_woocommerce_product_tab_content()
 	{
         global $post;
+        global $current_user;
+
+        // get offers options - general
+        $button_options_general = get_option('offers_for_woocommerce_options_general');
+
+        // enable offers for only logged in users
+        if($button_options_general && isset($button_options_general['general_setting_enable_offers_only_logged_in_users']) && $button_options_general['general_setting_enable_offers_only_logged_in_users'] != '') {
+            if ( !is_user_logged_in() ) return;
+        }
+
+        // enable offers for only certain user roles
+        if(!empty($button_options_general['general_setting_allowed_roles']))
+        {
+            if ( is_user_logged_in() ) {
+                $user_data = get_userdata($current_user->ID);
+                $user_roles = $user_data->roles;
+                $role_match = array_intersect($user_roles, $button_options_general['general_setting_allowed_roles'] );
+                if( empty($role_match) ) return;
+            }
+            else
+            {
+                return;
+            }
+        }
 
         $_pf = new WC_Product_Factory();
         $_product = $_pf->get_product( $post->ID );
@@ -402,8 +546,6 @@ class Angelleye_Offers_For_Woocommerce {
         $is_backorders_allowed = $_product->backorders_allowed();
         $stock_quantity = $_product->get_stock_quantity();
 
-        // get offers options - general
-        $button_options_general = get_option('offers_for_woocommerce_options_general');
         $global_limit_quantity_to_stock = ($button_options_general && isset($button_options_general['general_setting_limit_offer_quantity_by_stock']) && $button_options_general['general_setting_limit_offer_quantity_by_stock'] != '') ? true : false;
 
         $new_offer_quantity_limit = (!$is_backorders_allowed && $stock_quantity && $stock_quantity > 0 && $global_limit_quantity_to_stock) ? $stock_quantity : '';
@@ -465,6 +607,34 @@ class Angelleye_Offers_For_Woocommerce {
                 $offer_company_name = get_post_meta($parent_offer_id, 'offer_company_name', true );
                 $offer_phone = get_post_meta($parent_offer_id, 'offer_phone', true );
                 $offer_email = get_post_meta($parent_offer_id, 'offer_email', true );
+            }
+        }
+
+        // If name,phone,email not already specified, then try to pull logged in user data if user is logged in
+        if(empty($offer_name))
+        {
+            if( is_user_logged_in() )
+            {
+                $current_user = wp_get_current_user();
+
+                $offer_email = $current_user->user_email;
+                $offer_company_name = (!empty($current_user->billing_company)) ? $current_user->billing_company : '';
+                $offer_phone = (!empty($current_user->billing_phone)) ? $current_user->billing_phone : '';
+
+                // use WP user first/last name if available
+                if(!empty($current_user->user_firstname))
+                {
+                    $offer_name = $current_user->user_firstname;
+                    $offer_name.= (!empty($current_user->user_lastname)) ? ' ' . $current_user->user_lastname : '';
+                }
+                else // use WP/WC billing first/last name
+                {
+                    if(!empty($current_user->billing_first_name))
+                    {
+                        $offer_name = $current_user->billing_first_name;
+                        $offer_name.= (!empty($current_user->billing_last_name)) ? ' ' . $current_user->billing_last_name : '';
+                    }
+                }
             }
         }
 
@@ -749,6 +919,30 @@ class Angelleye_Offers_For_Woocommerce {
                 // set offer comments
                 $comments = (isset($_POST['offer_notes']) && $_POST['offer_notes'] != '') ? strip_tags(nl2br($_POST['offer_notes']), '<br><p>') : '';
 
+                /**
+                 * Akismet spam check
+                 * Passes back true (it's spam) or false (it's ham)
+                 * @since   1.2.0
+                 */
+                $akismet_api_key = '9a57112207be';
+                $data = array('blog' => get_site_url(),
+                    'user_ip' => $_SERVER['REMOTE_ADDR'],
+                    'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+                    'referrer' => '',
+                    'permalink' => get_permalink($formData['offer_product_id']),
+                    'comment_type' => 'woocommerce_offer',
+                    'comment_author' => $formData['offer_name'],
+                    'comment_author_email' => $formData['offer_email'],
+                    'comment_author_url' => '',
+                    'comment_content' => $comments
+                );
+                if($this->aeofwc_akismet_comment_check( $akismet_api_key, $data ))
+                {
+                    // is spam
+                    echo json_encode(array("statusmsg" => 'failed-spam', "statusmsgDetail" => __( 'Invalid Offer Submission; See shop manager for assistance', $this->plugin_slug ) ));
+                    exit;
+                }
+
                 // check for parent post id
                 $parent_post_id = (isset($_POST['parent_offer_id'])) ? $_POST['parent_offer_id'] : '';
                 $parent_post_status = get_post_status($parent_post_id);
@@ -845,22 +1039,7 @@ class Angelleye_Offers_For_Woocommerce {
                             $newPostMetaData['post_id'] = $parent_post_id;
                             $newPostMetaData['meta_key'] = $k;
                             $newPostMetaData['meta_value'] = $v;
-
-                            if(!$wpdb->query( $wpdb->prepare(
-                                "INSERT INTO $wpdb->postmeta
-                                    ( post_id, meta_key, meta_value )
-                                    VALUES ( %d, %s, %s )
-                                ",
-                                $parent_post_id,
-                                $newPostMetaData['meta_key'],
-                                $newPostMetaData['meta_value']
-                                ) ) )
-                            {
-                                ////echo json_encode($wpdb->last_query);
-                                // return error msg
-                                echo json_encode(array("statusmsg" => 'failed', "statusmsgDetail" => 'database error'));
-                                exit;
-                            }
+                            add_post_meta($newPostMetaData['post_id'], $newPostMetaData['meta_key'], $newPostMetaData['meta_value']);
                         }
 
                         // Insert WP comment
@@ -952,7 +1131,13 @@ class Angelleye_Offers_For_Woocommerce {
                 }
                 else
                 {
-                    $offer_args['product_title_formatted'] = $product->get_formatted_name();
+                    if ( !empty($product) ) {
+                        $identifier = $product->get_sku();
+                    } else {
+                        $identifier = '#' . $product_id;
+                    }
+
+                    $offer_args['product_title_formatted'] = sprintf( __( '%s &ndash; %s', 'woocommerce' ), $identifier, $product->get_title() );
                 }
 
                 if($is_counter_offer)
@@ -964,7 +1149,6 @@ class Angelleye_Offers_For_Woocommerce {
                      */
                     // the email we want to send
                     $email_class = 'WC_New_Counter_Offer_Email';
-
                 }
                 else
                 {
@@ -1144,27 +1328,6 @@ class Angelleye_Offers_For_Woocommerce {
                 {
                     $request_error = true;
                     $this->send_api_response( __( 'Error - Product Not Found; See shop manager for assistance', $this->plugin_slug ) );
-                }
-
-                // Check product stock availability
-                $_pf = new WC_Product_Factory();
-                $_product = $_pf->get_product($product_id);
-                $_product_stock = $_product->get_total_stock();
-                $_product_in_stock = $_product->has_enough_stock($offer_meta['offer_quantity'][0]);
-
-                if(!$_product_in_stock)
-                {
-                    $request_error = true;
-
-                    if($_product_stock != '' && $_product_stock != '0' && $_product_stock < $offer_meta['offer_quantity'][0])
-                    {
-                        $_product_in_stock_formatted = number_format($_product_stock, 0);
-                        $this->send_api_response( sprintf( __( 'Error - Product does not have enough in stock to fulfill your order at this time.', $this->plugin_slug ). '<br />Current stock available: %s', $_product_in_stock_formatted ) );
-                    }
-                    else
-                    {
-                        $this->send_api_response( __( 'Error - Product is out of stock; See shop manager for assistance', $this->plugin_slug ) );
-                    }
                 }
 
                 if(!$request_error)
@@ -1360,7 +1523,7 @@ class Angelleye_Offers_For_Woocommerce {
      * Adds offer postmeta  'offer_order_id'
      * @since   0.1.0
      */
-    public function ae_ofwc_woocommerce_checkout_order_processed( $order_id, $posted )
+    public function ae_ofwc_woocommerce_checkout_order_processed( $order_id )
     {
         global $woocommerce;
 
@@ -1471,6 +1634,55 @@ class Angelleye_Offers_For_Woocommerce {
                 }
             }
         }
+    }
+
+    /**
+     * Akismet spam check
+     * Passes back true (it's spam) or false (it's ham)
+     * @param $key
+     * @param $data
+     * @return bool
+     * @since   1.2.0
+     */
+    public function aeofwc_akismet_comment_check( $key, $data ) {
+        $request = 'blog='. urlencode($data['blog']) .
+            '&user_ip='. urlencode($data['user_ip']) .
+            '&user_agent='. urlencode($data['user_agent']) .
+            '&referrer='. urlencode($data['referrer']) .
+            '&permalink='. urlencode($data['permalink']) .
+            '&comment_type='. urlencode($data['comment_type']) .
+            '&comment_author='. urlencode($data['comment_author']) .
+            '&comment_author_email='. urlencode($data['comment_author_email']) .
+            '&comment_author_url='. urlencode($data['comment_author_url']) .
+            '&comment_content='. urlencode($data['comment_content']);
+        $host = $http_host = $key.'.rest.akismet.com';
+        $path = '/1.1/comment-check';
+        $port = 443;
+        $akismet_ua = "WordPress/3.8.1 | Akismet/2.5.9";
+        $content_length = strlen( $request );
+        $http_request  = "POST $path HTTP/1.0\r\n";
+        $http_request .= "Host: $host\r\n";
+        $http_request .= "Content-Type: application/x-www-form-urlencoded\r\n";
+        $http_request .= "Content-Length: {$content_length}\r\n";
+        $http_request .= "User-Agent: {$akismet_ua}\r\n";
+        $http_request .= "\r\n";
+        $http_request .= $request;
+        $response = '';
+        if( false != ( $fs = @fsockopen( 'ssl://' . $http_host, $port, $errno, $errstr, 10 ) ) ) {
+
+            fwrite( $fs, $http_request );
+
+            while ( !feof( $fs ) )
+                $response .= fgets( $fs, 1160 ); // One TCP-IP packet
+            fclose( $fs );
+
+            $response = explode( "\r\n\r\n", $response, 2 );
+        }
+
+        if ( 'true' == $response[1] )
+            return true;
+        else
+            return false;
     }
 
 }
